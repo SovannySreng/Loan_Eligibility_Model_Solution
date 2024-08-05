@@ -25,6 +25,3 @@ This project aims to build a model to predict loan eligibility based on various 
 - matplotlib
 - seaborn
 - scikit-learn
-
-## License
-This project is licensed under the MIT License.
