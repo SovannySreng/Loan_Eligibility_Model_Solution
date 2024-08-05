@@ -1,6 +1,17 @@
-from sklearn.metrics import classification_report, confusion_matrix
 
-def evaluate_model(model, x_test, y_test):
-    y_pred = model.predict(x_test)
-    print(classification_report(y_test, y_pred))
-    print(confusion_matrix(y_test, y_pred))
+
+# src/evaluation.py
+
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+def evaluate_model(y_true, y_pred):
+    print("Accuracy:", accuracy_score(y_true, y_pred))
+    print("Confusion Matrix:\n", confusion_matrix(y_true, y_pred))
+    print("Classification Report:\n", classification_report(y_true, y_pred))
+
+def cross_validation(model, xtrain, ytrain, kfold):
+    from sklearn.model_selection import cross_val_score
+    scores = cross_val_score(model, xtrain, ytrain, cv=kfold)
+    print("Accuracy scores:", scores)
+    print("Mean accuracy:", scores.mean())
+    print("Standard deviation:", scores.std())

@@ -1,47 +1,68 @@
-from src.data_preprocessing import load_data, preprocess_data
-from src.eda import eda
-from src.feature_engineering import feature_engineering
-from src.model_training import train_model
-from src.evaluation import evaluate_model
-from src.visualizations import plot_histograms, plot_categorical_distribution
-from src.utils import setup_logging, log_error
-from sklearn.model_selection import train_test_split
+# main.py
+
+import logging
+from src.data_preprocessing import load_data, preprocess_data, split_data, scale_data
+from src.eda import perform_eda
+from src.model_training import train_logistic_regression, train_random_forest
+from src.evaluation import evaluate_model, cross_validation
+from src.visualizations import plot_loan_approval, plot_distributions, plot_correlation, plot_confusion_matrix
+from sklearn.model_selection import KFold
+import pandas as pd
+
+def setup_logging():
+    logging.basicConfig(filename='logs/app.log', filemode='a', format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 def main():
     setup_logging()
-    
     try:
-        df = load_data('H:\My Drive\BISI II\Data Science\Term Assignments\Loan_Eligibility_Model_Solution\data\credit.csv')
-        
+        # Load Data
+        df = load_data('H:/My Drive/BISI II/Data Science/Term Assignments/Loan_Eligibility_Model_Solution/data/credit.csv')
+        df = df.drop(columns=['Loan_ID'])
+        df = pd.get_dummies(df, columns=['Gender', 'Married', 'Dependents', 'Education', 'Self_Employed', 'Property_Area'])
         # Perform EDA
-        eda(df)
+        perform_eda(df)
+        plot_loan_approval(df)
+        plot_distributions(df)
+        plot_correlation(df)
         
         # Preprocess Data
         df = preprocess_data(df)
         
-        # Feature Engineering
-        df = feature_engineering(df)
+        # Print head of dataframe to debug
+        print("Head of DataFrame after preprocessing: ")
+        print(df.head())
         
-        # Visualizations
-        num_cols = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
-        cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        # Split Data
+        xtrain, xtest, ytrain, ytest = split_data(df)
         
-        plot_histograms(df, num_cols)
-        plot_categorical_distribution(df, cat_cols)
+        # Scale Data
+        xtrain_scaled, xtest_scaled = scale_data(xtrain, xtest)
         
-        # Split the data
-        X = df.drop('target', axis=1)
-        y = df['target']
-        x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        # Train Models
+        lrmodel = train_logistic_regression(xtrain_scaled, ytrain)
+        rfmodel = train_random_forest(xtrain, ytrain)
         
-        # Train the model
-        model = train_model(x_train, y_train)
+        # Evaluate Models
+        print("Logistic Regression Evaluation")
+        ypred_lr = lrmodel.predict(xtest_scaled)
+        evaluate_model(ytest, ypred_lr)
+        plot_confusion_matrix(ytest, ypred_lr)
         
-        # Evaluate the model
-        evaluate_model(model, x_test, y_test)
+        print("Random Forest Evaluation")
+        ypred_rf = rfmodel.predict(xtest)
+        evaluate_model(ytest, ypred_rf)
+        plot_confusion_matrix(ytest, ypred_rf)
+        
+        # Cross Validation
+        kfold = KFold(n_splits=5)
+        print("Logistic Regression Cross Validation")
+        cross_validation(lrmodel, xtrain_scaled, ytrain, kfold)
+        
+        print("Random Forest Cross Validation")
+        cross_validation(rfmodel, xtrain, ytrain, kfold)
         
     except Exception as e:
-        log_error(e)
+        logging.error("An error occurred: %s", str(e))
         print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
